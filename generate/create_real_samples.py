@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def normal_dist(loc: float, scale: float, size: int, function) -> list[list[float]]:
     """
     Generates random samples from normal distribution. 
@@ -16,6 +17,7 @@ def normal_dist(loc: float, scale: float, size: int, function) -> list[list[floa
     """
     x = np.random.normal(loc=loc, scale=scale, size=size)
     return [function(xi) for xi in x]
+
 
 def uni_dist(low: float, high: float, size: int, function) -> list[list[float]]:
     """
@@ -33,11 +35,12 @@ def uni_dist(low: float, high: float, size: int, function) -> list[list[float]]:
     x = np.random.uniform(low=low, high=high, size=size)
     return [function(xi) for xi in x]
 
+
 if __name__=='__main__':
     a = 0   # loc/lower (normal/uniform)
     b = 1   #scale/upper (normal/uniform)
     size = 1000
-    file_name = 'gaussian'
+    file_name = 'gaussian_test'
 
     def func(xi: float) -> list:
         """

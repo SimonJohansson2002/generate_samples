@@ -39,7 +39,8 @@ def plot_dist(df: pd.DataFrame, filename: str):
         # Overlay fitted pdf
         x = np.linspace(min(data), max(data), 200)
         pdf = dist.pdf(x, *params)
-        ax_hist.plot(x, pdf, "r-", lw=2, label=f"{best_dist}\n{params}")
+        params_rounded = [round(p, 4) for p in params]
+        ax_hist.plot(x, pdf, "r-", lw=2, label=f"{best_dist}\n{params_rounded}")
         ax_hist.set_title(f"{col}: Histogram + Fit")
         ax_hist.legend()
 
@@ -52,10 +53,11 @@ def plot_dist(df: pd.DataFrame, filename: str):
     fig.savefig(f'images/{filename}', format="svg")
     plt.close(fig)
 
-if __name__=='__main__':
-    infile = 'real_samples/gaussian.csv'
-    outfile = 'gaussian.svg'
 
-    df = pd.read_csv(infile, index_col=0)  # don’t treat index as a column
+if __name__=='__main__':
+    infile = 'noise_samples/gaussian_noise_test.csv'
+    outfile = 'gaussian_noise_test.svg'
+
+    df = pd.read_csv(infile)
 
     plot_dist(df, outfile)

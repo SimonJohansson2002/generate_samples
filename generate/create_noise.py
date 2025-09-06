@@ -36,40 +36,44 @@ def add_noise(df: pd.DataFrame, scale: float, alpha: float) -> tuple[pd.DataFram
     df_noise = np.sqrt(alpha) * df + np.sqrt(1-alpha) * noise
     return df_noise, noise
 
-def save_noise(infile: str, outfile: str, scale: float, T: int = 1000, beta_start: float = 1e-4, beta_end: float = 0.02):
+
+def samples_with_noise(infile: str, scale: float, T: int = 1000, beta_start: float = 1e-4, beta_end: float = 0.02) -> pd.DataFrame:
     """
-    Adds white noise to the real data. Saves csv file with new data and the added noise. Uses linear diffusion schedule. 
+    Adds white noise to the real data. Uses linear diffusion schedule. 
     alpha = 1 - beta
     x1 = np.sqrt(alpha) * x0 + np.sqrt(1-alpha) * noise
 
     Args:
         infile (str): Path to real data
-        outfile (str): Name of the new file, e.g. 'gaussian_noise.csv'
         scale (float): Standard deviation for white noise
         T (int, optional): Maximum length of the stochastic process. Defaults to 1000.
         beta_start (float, optional): Initial diffusion rate for white noise being added. Defaults to 1e-4.
         beta_end (float, optional): End diffusion rate for white noise being added. Defaults to 0.02.
-    """
-    df = pd.read_csv(infile, index_col=0)
 
-    t = np.random.randint(0, T)
-    betas = np.linspace(beta_start, beta_end, t)
+    Returns (pd.DataFrame): samples with noise
+    """
+    df = pd.read_csv(infile)
+
+    betas = np.linspace(beta_start, beta_end, T)
     alphas = 1 - betas
     alpha_cumprod = np.cumprod(alphas)
     df_noise = df.copy()
 
-    df_noise, noise = add_noise(df_noise, float(scale), alpha_cumprod[-1])
+    t = np.random.randint(0, T)
+    df_noise, noise = add_noise(df_noise, float(scale), alpha_cumprod[t])
 
     # Add noise columns
     for col in noise.columns:
         noise_col_name = f'Noise {col}'
         df_noise[noise_col_name] = noise[col]
 
-    df_noise.to_csv(f'noise_samples/{outfile}', index=False)
+    return df_noise
 
 if __name__=='__main__':
-    infile = 'real_samples/gaussian.csv'
-    outfile = 'gaussian_noise.csv'
+    infile = 'real_samples/gaussian_test.csv'
+    outfile = 'gaussian_noise_test.csv'
     scale = 3   # standard deviation for white noise
     
-    save_noise(infile, outfile, scale)
+    df_noise = samples_with_noise(infile, outfile, scale)
+
+    df_noise.to_csv(f'noise_samples/{outfile}', index=False)
