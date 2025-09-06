@@ -37,7 +37,7 @@ def add_noise(df: pd.DataFrame, scale: float, alpha: float) -> tuple[pd.DataFram
     return df_noise, noise
 
 
-def samples_with_noise(infile: str, scale: float, T: int = 1000, beta_start: float = 1e-4, beta_end: float = 0.02) -> pd.DataFrame:
+def samples_with_noise(infile: str, scale: float, t: int, alpha_cumprod: np.cumprod, beta_start: float = 1e-4, beta_end: float = 0.02) -> pd.DataFrame:
     """
     Adds white noise to the real data. Uses linear diffusion schedule. 
     alpha = 1 - beta
@@ -46,7 +46,8 @@ def samples_with_noise(infile: str, scale: float, T: int = 1000, beta_start: flo
     Args:
         infile (str): Path to real data
         scale (float): Standard deviation for white noise
-        T (int, optional): Maximum length of the stochastic process. Defaults to 1000.
+        t (int): Maximum length of the stochastic process. Defaults to 1000.
+        alpha_cumprod (np.cumprod): Compounded multiplication of aplha.
         beta_start (float, optional): Initial diffusion rate for white noise being added. Defaults to 1e-4.
         beta_end (float, optional): End diffusion rate for white noise being added. Defaults to 0.02.
 
@@ -54,12 +55,6 @@ def samples_with_noise(infile: str, scale: float, T: int = 1000, beta_start: flo
     """
     df = pd.read_csv(infile)
 
-    betas = np.linspace(beta_start, beta_end, T)
-    alphas = 1 - betas
-    alpha_cumprod = np.cumprod(alphas)
-    df_noise = df.copy()
-
-    t = np.random.randint(0, T)
     df_noise, noise = add_noise(df_noise, float(scale), alpha_cumprod[t])
 
     # Add noise columns
@@ -72,7 +67,7 @@ def samples_with_noise(infile: str, scale: float, T: int = 1000, beta_start: flo
 if __name__=='__main__':
     infile = 'real_samples/gaussian_test.csv'
     outfile = 'gaussian_noise_test.csv'
-    scale = 3   # standard deviation for white noise
+    scale = 1   # standard deviation for white noise
     
     df_noise = samples_with_noise(infile, outfile, scale)
 

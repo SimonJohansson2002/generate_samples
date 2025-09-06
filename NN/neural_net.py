@@ -1,5 +1,7 @@
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 from keras import layers, models
+import tensorflow as tf
 import pandas as pd
 import numpy as np
 
@@ -30,39 +32,52 @@ def get_xy(df: pd.DataFrame) -> tuple[np.array]:
     return np.array(X), np.array(y)
 
 
-def train_nn(X: np.array, y: np.array, model: models.Sequential = None) -> models.Sequential:
+def train_nn(X: np.array, y: np.array, t: np.array, T: int, scaler: StandardScaler, model: models.Model = None) -> models.Model:
     """
-    Trains a neural network based on X and y. Option to train already existing neural network. 
+    Trains a timestep-conditioned neural network.
 
     Args:
-        X (np.array): Input data. 
-        y (np.array): Output/labels.
-        model (models.Sequential, optional): Existing neural network. Defaults to None. 
+        X (np.array): Input data, shape (n_samples, n_features).
+        y (np.array): Target noise, shape (n_samples, n_features).
+        t (np.array): Timesteps for each sample, shape (n_samples,).
+        T (int): Maximum number of timesteps.
+        model (models.Model, optional): Existing model to continue training. Defaults to None.
 
     Returns:
-        models.Sequential: neural network model
+        models.Model: Trained model.
     """
-
     X = X.astype('float32')
     y = y.astype('float32')
+    t = t.astype('int32')
 
-    if not model:
+    X_scaled = scaler.fit_transform(X)
+
+    if model is None:
         n_features = X.shape[1]
 
-        # Build a simple fully-connected neural network
-        model = models.Sequential([
-            layers.Input(shape=(n_features,)),
-            layers.Dense(128, activation='relu'),
-            layers.Dense(128, activation='relu'),
-            layers.Dense(n_features)  # output dimension same as input/noise
-        ])
+        # Define model using Functional API
+        x_input = layers.Input(shape=(n_features,))
+        t_input = layers.Input(shape=(), dtype=tf.int32)
 
-        model.compile(optimizer='adam', loss='mse')
+        # Time embedding
+        t_emb = layers.Embedding(input_dim=T+1, output_dim=32)(t_input)
+        t_emb = layers.Dense(128, activation="relu")(t_emb)
+
+        # Feature projection
+        x_proj = layers.Dense(128, activation="relu")(x_input)
+
+        # Combine
+        h = layers.Concatenate()([x_proj, t_emb])
+        h = layers.Dense(128, activation="relu")(h)
+        output = layers.Dense(n_features)(h)
+
+        model = models.Model(inputs=[x_input, t_input], outputs=output)
+        model.compile(optimizer="adam", loss="mse")
 
     # Train the model
-    model.fit(X, y, epochs=50, batch_size=32, verbose=1)
+    model.fit([X_scaled, t], y, epochs=50, batch_size=32, verbose=1)
 
-    return model
+    return model, scaler
 
 
 def get_predicted_error(df: pd.DataFrame, model: models.Sequential) -> pd.DataFrame:
@@ -100,10 +115,13 @@ if __name__=='__main__':
     testfile = 'noise_samples/gaussian_noise_test.csv'
     scale = 1
     size = 10
+    t = 1000
+    T = 1000
 
+    scaler = StandardScaler()
     df = pd.read_csv(infile)
     X, y = get_xy(df)
-    model = train_nn(X, y)
+    model = train_nn(X, y, t, T, scaler)
 
     df_test = pd.read_csv(testfile)
     y_pred = get_predicted_error(df_test, model)
