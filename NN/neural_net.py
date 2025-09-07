@@ -65,7 +65,11 @@ def train_nn(X: np.array,
              T: int, 
              scaler: StandardScaler, 
              batch_size: int,
-             model: models.Model = None) -> models.Model:
+             epochs: int,
+             model: models.Model = None,
+             X_units: int = 128,
+             t_units: int = 128,
+             concatenate_units: int = 128) -> tuple[models.Model, float]:
     """
     Trains a timestep-conditioned neural network. Data does not need to be scaled.
 
@@ -76,10 +80,14 @@ def train_nn(X: np.array,
         T (int): Maximum number of timesteps.
         scaler (StandardScaler): Scaler for X.
         batch_size (int): Batch size when fitting data. 
+        epochs (int): Number of epochs used in training. 
         model (models.Model, optional): Existing model to continue training. Defaults to None.
+        X_units (int, optional): Number of neurons for X-values. 
+        t_units (int, optional): Number of neurons for t-values. 
+        concatenate_units (int, optional): Number of neurons for concatenated X- and t-values. 
 
     Returns:
-        models.Model: Trained model.
+        tuple[models.Model, float]: Trained model and loss for last epoch.
     """
     X = X.astype('float32')
     y = y.astype('float32')
@@ -94,14 +102,14 @@ def train_nn(X: np.array,
 
         # Time embedding
         t_emb = layers.Embedding(input_dim=T+1, output_dim=32)(t_input)
-        t_emb = layers.Dense(128, activation="relu")(t_emb)
+        t_emb = layers.Dense(t_units, activation="relu")(t_emb)
 
         # Feature projection
-        x_proj = layers.Dense(128, activation="relu")(x_input)
+        x_proj = layers.Dense(X_units, activation="relu")(x_input)
 
         # Combine
         h = layers.Concatenate()([x_proj, t_emb])
-        h = layers.Dense(128, activation="relu")(h)
+        h = layers.Dense(concatenate_units, activation="relu")(h)
         output = layers.Dense(n_features)(h)
 
         model = models.Model(inputs=[x_input, t_input], outputs=output)
@@ -113,9 +121,10 @@ def train_nn(X: np.array,
         X_scaled = scaler.transform(X)
 
     # Train the model
-    model.fit([X_scaled, t], y, epochs=50, batch_size=batch_size, verbose=1)
+    history = model.fit([X_scaled, t], y, epochs=epochs, batch_size=batch_size, verbose=1)
+    last_loss = history.history['loss'][-1]
 
-    return model
+    return model, last_loss
 
 
 def get_predicted_noise(X: np.array, t: np.array, model: models.Sequential, scaler: StandardScaler) -> pd.DataFrame:

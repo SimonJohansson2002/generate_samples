@@ -13,16 +13,20 @@ def func(xi: float) -> list:
     return [xi, xi*2]
 
 
-def build_model(iterations: int = 10,
-                sample_size: int = 1000,
+def build_model(iterations: int = 1000,
+                sample_size: int = 10000,
                 loc_real: float = 0, 
                 scale_real: float = 1,
                 loc_noise: float = 0, 
                 scale_noise: float = 1, 
-                T: int = 1000, 
+                T: int = 999, 
                 beta_start: float = 1e-4, 
                 beta_end: float = 0.02, 
-                batch_size: int = 32):
+                epochs: int = 1,
+                batch_size: int = 128,
+                X_units: int = 32,
+                t_units: int = 32,
+                concatenate_units: int = 16):
     
     betas = np.linspace(beta_start, beta_end, T)
     alphas = 1 - betas
@@ -32,7 +36,9 @@ def build_model(iterations: int = 10,
 
     # plot for mse
     x_values = []
-    y_values = []
+    y_test_loss = []
+    y_train_loss = []
+
     scaler = StandardScaler()   # use same scaler throughout all training and testing to keep distribution
 
     for i in range(iterations):
@@ -48,7 +54,8 @@ def build_model(iterations: int = 10,
         
         # train the model
         X, y = get_xy(noise_samples)
-        model = train_nn(X=X, y=y, t=t, T=T, scaler=scaler, batch_size=batch_size, model=model)
+        model, last_loss = train_nn(X=X, y=y, t=t, T=T, scaler=scaler, batch_size=batch_size, epochs=epochs, model=model, X_units=X_units, t_units=t_units, concatenate_units=concatenate_units)
+        y_train_loss.append(last_loss)
 
         # create test
         t_test = np.random.randint(0, T, size=(rows,))
@@ -57,9 +64,11 @@ def build_model(iterations: int = 10,
         predicted_noise = get_predicted_noise(X=X_test, t=t_test, model=model, scaler=scaler)
         mse = mean_squared_error(y_true=y_test, y_pred=predicted_noise)
         x_values.append(i)
-        y_values.append(mse)
+        y_test_loss.append(mse)
     
-    plt.plot(x_values, y_values)
+    plt.plot(x_values, y_test_loss, label='Test loss')
+    plt.plot(x_values, y_train_loss, label='Train loss')
+    plt.legend()
     plt.title('MSE')
     plt.show()
 
