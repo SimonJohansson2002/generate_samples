@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def normal_dist(loc: float, scale: float, size: int, function) -> list[list[float]]:
+def normal_dist(loc: float, scale: float, size: int, function) -> pd.DataFrame:
     """
     Generates random samples from normal distribution. 
 
@@ -10,16 +10,16 @@ def normal_dist(loc: float, scale: float, size: int, function) -> list[list[floa
         loc (float): Mean
         scale (float): Standard deviation
         size (int): Sample size
-        function (_type_): Function applied to each draw.
+        function (_type_): Function applied to each draw, e.g. def func(xi: float) -> list.
 
     Returns:
-        list[list[float]]: Transformed samples. 
+        pd.DataFrame: Transformed samples. 
     """
     x = np.random.normal(loc=loc, scale=scale, size=size)
-    return [function(xi) for xi in x]
+    return pd.DataFrame([function(xi) for xi in x])
 
 
-def uni_dist(low: float, high: float, size: int, function) -> list[list[float]]:
+def uni_dist(low: float, high: float, size: int, function) -> pd.DataFrame:
     """
     Generates random samples from normal distribution. 
 
@@ -27,13 +27,13 @@ def uni_dist(low: float, high: float, size: int, function) -> list[list[float]]:
         low (float): Lower limit
         high (float): Upper limit
         size (int): Sample size
-        function (_type_): Function applied to each draw.
+        function (_type_): Function applied to each draw, e.g. def func(xi: float) -> list.
 
     Returns:
-        list[list[float]]: Transformed samples.
+        pd.DataFrame: Transformed samples.
     """
     x = np.random.uniform(low=low, high=high, size=size)
-    return [function(xi) for xi in x]
+    return pd.DataFrame([function(xi) for xi in x])
 
 
 if __name__=='__main__':

@@ -5,6 +5,33 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
+
+def sigmoid(x: np.array) -> np.array:
+    """
+    Transforms values between (-inf, inf) into values between (0, 1) using sigmoid function.
+
+    Args:
+        x (np.array): Original values between (-inf, inf)
+
+    Returns:
+        np.array: Transformed values between (0, 1)
+    """
+    return 1 / (1 + np.exp(-x))
+
+
+def inverse_sigmoid(x: np.array) -> np.array:
+    """
+    Transforms values between (0, 1) to (-inf, inf) using inverse sigmoid function. 
+
+    Args:
+        x (np.array): Values between (0, 1).
+
+    Returns:
+        np.array: Transformed values between (-inf, inf).
+    """
+    return -np.log(1/x - 1)
+
+
 def get_xy(df: pd.DataFrame) -> tuple[np.array]:
     """
     Extracts the input data and labels. 
@@ -21,7 +48,7 @@ def get_xy(df: pd.DataFrame) -> tuple[np.array]:
     labels = []
 
     for col in columns:
-        if 'Noise' in col:
+        if type(col) == str and 'Noise' in col:
             labels.append(col)
         else:
             inputs.append(col)
@@ -32,15 +59,23 @@ def get_xy(df: pd.DataFrame) -> tuple[np.array]:
     return np.array(X), np.array(y)
 
 
-def train_nn(X: np.array, y: np.array, t: np.array, T: int, scaler: StandardScaler, model: models.Model = None) -> models.Model:
+def train_nn(X: np.array, 
+             y: np.array, 
+             t: np.array, 
+             T: int, 
+             scaler: StandardScaler, 
+             batch_size: int,
+             model: models.Model = None) -> models.Model:
     """
-    Trains a timestep-conditioned neural network.
+    Trains a timestep-conditioned neural network. Data does not need to be scaled.
 
     Args:
         X (np.array): Input data, shape (n_samples, n_features).
         y (np.array): Target noise, shape (n_samples, n_features).
         t (np.array): Timesteps for each sample, shape (n_samples,).
         T (int): Maximum number of timesteps.
+        scaler (StandardScaler): Scaler for X.
+        batch_size (int): Batch size when fitting data. 
         model (models.Model, optional): Existing model to continue training. Defaults to None.
 
     Returns:
@@ -49,8 +84,6 @@ def train_nn(X: np.array, y: np.array, t: np.array, T: int, scaler: StandardScal
     X = X.astype('float32')
     y = y.astype('float32')
     t = t.astype('int32')
-
-    X_scaled = scaler.fit_transform(X)
 
     if model is None:
         n_features = X.shape[1]
@@ -74,41 +107,37 @@ def train_nn(X: np.array, y: np.array, t: np.array, T: int, scaler: StandardScal
         model = models.Model(inputs=[x_input, t_input], outputs=output)
         model.compile(optimizer="adam", loss="mse")
 
+        # Scale data
+        X_scaled = scaler.fit_transform(X)
+    else:
+        X_scaled = scaler.transform(X)
+
     # Train the model
-    model.fit([X_scaled, t], y, epochs=50, batch_size=32, verbose=1)
+    model.fit([X_scaled, t], y, epochs=50, batch_size=batch_size, verbose=1)
 
-    return model, scaler
+    return model
 
 
-def get_predicted_error(df: pd.DataFrame, model: models.Sequential) -> pd.DataFrame:
+def get_predicted_noise(X: np.array, t: np.array, model: models.Sequential, scaler: StandardScaler) -> pd.DataFrame:
     """
     Takes noisy data and predicts the noise.
 
     Args:
-        df (pd.DataFrame): Noisy data, must have the same shape as the model input data. The columns with labels have 'Noise' in the name.
-        model (models.Sequential): Neural network model
+        X (np.array): Input data, shape (n_samples, n_features). Not scaled data.
+        t (np.array): Matrix with timesteps for each sample.
+        model (models.Sequential): Neural network model.
+        scaler (StandardScaler): Scaler for X.
 
     Returns:
-        pd.DataFrame: predicted values
+        pd.DataFrame: Predicted noise
     """
+    # scale the samples using the same scaler as everywhere else
+    X_scaled = scaler.transform(X)
 
-    columns = df.columns
+    # predict the noise
+    y_predicted = model.predict([X_scaled, t])
 
-    inputs = []
-
-    for col in columns:
-        if 'Noise' in col:
-            continue
-        else:
-            inputs.append(col)
-    
-    X = np.array(df[inputs])
-
-    y_predicted = model.predict(X)
-
-    pred_columns = [f"Pred Noise {i}" for i in inputs]
-
-    return pd.DataFrame(y_predicted, columns=pred_columns)
+    return pd.DataFrame(y_predicted)
 
 if __name__=='__main__':
     infile = 'noise_samples/gaussian_noise.csv'
