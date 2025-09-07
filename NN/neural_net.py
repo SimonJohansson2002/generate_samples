@@ -67,9 +67,9 @@ def train_nn(X: np.array,
              batch_size: int,
              epochs: int,
              model: models.Model = None,
-             X_units: int = 128,
-             t_units: int = 128,
-             concatenate_units: int = 128) -> tuple[models.Model, float]:
+             X_units: int = 16,
+             t_units: int = 16,
+             concatenate_units: list[int] = [16]) -> tuple[models.Model, float]:
     """
     Trains a timestep-conditioned neural network. Data does not need to be scaled.
 
@@ -84,10 +84,10 @@ def train_nn(X: np.array,
         model (models.Model, optional): Existing model to continue training. Defaults to None.
         X_units (int, optional): Number of neurons for X-values. 
         t_units (int, optional): Number of neurons for t-values. 
-        concatenate_units (int, optional): Number of neurons for concatenated X- and t-values. 
+        concatenate_units (list[int], optional): Number of neurons for concatenated X- and t-values. If several values in the list, then layers are added. 
 
     Returns:
-        tuple[models.Model, float]: Trained model and loss for last epoch.
+        tuple[models.Model, float]: Trained model and loss for first epoch.
     """
     X = X.astype('float32')
     y = y.astype('float32')
@@ -109,7 +109,9 @@ def train_nn(X: np.array,
 
         # Combine
         h = layers.Concatenate()([x_proj, t_emb])
-        h = layers.Dense(concatenate_units, activation="relu")(h)
+        for c in concatenate_units:
+            h = layers.Dense(c, activation="relu")(h)
+
         output = layers.Dense(n_features)(h)
 
         model = models.Model(inputs=[x_input, t_input], outputs=output)
@@ -122,9 +124,9 @@ def train_nn(X: np.array,
 
     # Train the model
     history = model.fit([X_scaled, t], y, epochs=epochs, batch_size=batch_size, verbose=1)
-    last_loss = history.history['loss'][-1]
+    first_loss = history.history['loss'][0]
 
-    return model, last_loss
+    return model, first_loss
 
 
 def get_predicted_noise(X: np.array, t: np.array, model: models.Sequential, scaler: StandardScaler) -> pd.DataFrame:
@@ -147,32 +149,3 @@ def get_predicted_noise(X: np.array, t: np.array, model: models.Sequential, scal
     y_predicted = model.predict([X_scaled, t])
 
     return pd.DataFrame(y_predicted)
-
-if __name__=='__main__':
-    infile = 'noise_samples/gaussian_noise.csv'
-    testfile = 'noise_samples/gaussian_noise_test.csv'
-    scale = 1
-    size = 10
-    t = 1000
-    T = 1000
-
-    scaler = StandardScaler()
-    df = pd.read_csv(infile)
-    X, y = get_xy(df)
-    model = train_nn(X, y, t, T, scaler)
-
-    df_test = pd.read_csv(testfile)
-    y_pred = get_predicted_error(df_test, model)
-
-    columns = df_test.columns
-    labels = []
-
-    for col in columns:
-        if 'Noise' in col:
-            labels.append(col)
-        else:
-            continue
-
-    mse = mean_squared_error(df_test[labels].values.flatten(), y_pred.values.flatten())
-
-    print(mse)

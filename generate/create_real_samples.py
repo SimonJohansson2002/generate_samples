@@ -34,27 +34,3 @@ def uni_dist(low: float, high: float, size: int, function) -> pd.DataFrame:
     """
     x = np.random.uniform(low=low, high=high, size=size)
     return pd.DataFrame([function(xi) for xi in x])
-
-
-if __name__=='__main__':
-    a = 0   # loc/lower (normal/uniform)
-    b = 1   #scale/upper (normal/uniform)
-    size = 1000
-    file_name = 'gaussian_test'
-
-    def func(xi: float) -> list:
-        """
-        Design your function for one sample. You can 
-
-        Args:
-            xi (float): the random value generated in one of the functions above.
-
-        Returns:
-            list: the structure of one sample, e.g. [xi, xi * 2]
-        """
-        
-        return [xi, xi * 2]
-
-    samples = pd.DataFrame(normal_dist(a, b, size, func))
-
-    samples.to_csv(f'real_samples/{file_name}.csv', index=False)

@@ -10,10 +10,20 @@ import numpy as np
 
 
 def func(xi: float) -> list:
+    """
+        Design your function for one sample. You can 
+
+        Args:
+            xi (float): The random value generated in one of the functions above.
+
+        Returns:
+            list: The structure of one sample, e.g. [xi, xi * 2]
+    """
     return [xi, xi*2]
 
 
-def build_model(iterations: int = 1000,
+def build_model(threshold: float = 0.21,
+                max_iterations: int = 50,
                 sample_size: int = 10000,
                 loc_real: float = 0, 
                 scale_real: float = 1,
@@ -23,10 +33,10 @@ def build_model(iterations: int = 1000,
                 beta_start: float = 1e-4, 
                 beta_end: float = 0.02, 
                 epochs: int = 1,
-                batch_size: int = 128,
+                batch_size: int = 64,
                 X_units: int = 32,
                 t_units: int = 32,
-                concatenate_units: int = 16):
+                concatenate_units: list[int] = [32,16]):
     
     betas = np.linspace(beta_start, beta_end, T)
     alphas = 1 - betas
@@ -41,7 +51,9 @@ def build_model(iterations: int = 1000,
 
     scaler = StandardScaler()   # use same scaler throughout all training and testing to keep distribution
 
-    for i in range(iterations):
+    i = 0
+
+    while i < max_iterations:
         # create real samples
         real_samples = normal_dist(loc=loc_real, scale=scale_real, size=sample_size, function=func)
 
@@ -54,8 +66,8 @@ def build_model(iterations: int = 1000,
         
         # train the model
         X, y = get_xy(noise_samples)
-        model, last_loss = train_nn(X=X, y=y, t=t, T=T, scaler=scaler, batch_size=batch_size, epochs=epochs, model=model, X_units=X_units, t_units=t_units, concatenate_units=concatenate_units)
-        y_train_loss.append(last_loss)
+        model, first_loss = train_nn(X=X, y=y, t=t, T=T, scaler=scaler, batch_size=batch_size, epochs=epochs, model=model, X_units=X_units, t_units=t_units, concatenate_units=concatenate_units)
+        y_train_loss.append(first_loss)
 
         # create test
         t_test = np.random.randint(0, T, size=(rows,))
@@ -65,6 +77,9 @@ def build_model(iterations: int = 1000,
         mse = mean_squared_error(y_true=y_test, y_pred=predicted_noise)
         x_values.append(i)
         y_test_loss.append(mse)
+        
+        i += 1
+        if mse <= threshold: break
     
     plt.plot(x_values, y_test_loss, label='Test loss')
     plt.plot(x_values, y_train_loss, label='Train loss')

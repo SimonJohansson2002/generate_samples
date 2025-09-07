@@ -66,14 +66,3 @@ def samples_with_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, 
         df_noise[noise_col_name] = noise[col]
 
     return df_noise
-
-if __name__=='__main__':
-    infile = 'real_samples/gaussian_test.csv'
-    outfile = 'gaussian_noise_test.csv'
-    scale = 1   # standard deviation for white noise
-
-    df = pd.read_csv(infile)
-    
-    df_noise = samples_with_noise(df, scale)
-
-    df_noise.to_csv(f'noise_samples/{outfile}', index=False)

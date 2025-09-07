@@ -52,12 +52,3 @@ def plot_dist(df: pd.DataFrame, filename: str):
     plt.tight_layout()
     fig.savefig(f'images/{filename}', format="svg")
     plt.close(fig)
-
-
-if __name__=='__main__':
-    infile = 'noise_samples/gaussian_noise_test.csv'
-    outfile = 'gaussian_noise_test.svg'
-
-    df = pd.read_csv(infile)
-
-    plot_dist(df, outfile)
