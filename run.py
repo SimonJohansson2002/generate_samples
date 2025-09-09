@@ -1,6 +1,7 @@
 from NN.neural_net import get_xy, train_nn, get_predicted_noise, sigmoid, inverse_sigmoid
+from generate.create_noise import samples_with_noise, get_noise
 from generate.create_real_samples import normal_dist, uni_dist
-from generate.create_noise import samples_with_noise
+from generate.create_fake_samples import diffusion
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 from statistics.view import plot_dist
@@ -25,14 +26,15 @@ def func(xi: float) -> list:
 def build_model(threshold: float = 0.21,
                 max_iterations: int = 50,
                 sample_size: int = 10000,
-                loc_real: float = 0, 
+                loc_real: float = 1, 
                 scale_real: float = 1,
                 loc_noise: float = 0, 
                 scale_noise: float = 1, 
-                T: int = 999, 
+                T: int = 1000, 
                 beta_start: float = 1e-4, 
                 beta_end: float = 0.02, 
                 epochs: int = 1,
+                t_emb_units: int = 16,
                 batch_size: int = 64,
                 X_units: int = 32,
                 t_units: int = 32,
@@ -66,7 +68,18 @@ def build_model(threshold: float = 0.21,
         
         # train the model
         X, y = get_xy(noise_samples)
-        model, first_loss = train_nn(X=X, y=y, t=t, T=T, scaler=scaler, batch_size=batch_size, epochs=epochs, model=model, X_units=X_units, t_units=t_units, concatenate_units=concatenate_units)
+        model, first_loss = train_nn(X=X, 
+                                     y=y, 
+                                     t=t, 
+                                     T=T, 
+                                     scaler=scaler, 
+                                     batch_size=batch_size, 
+                                     epochs=epochs, 
+                                     model=model, 
+                                     t_emb_units=t_emb_units, 
+                                     X_units=X_units, 
+                                     t_units=t_units, 
+                                     concatenate_units=concatenate_units)
         y_train_loss.append(first_loss)
 
         # create test
@@ -88,8 +101,18 @@ def build_model(threshold: float = 0.21,
     plt.show()
 
     # create a random white noise sample
-    # predict the noise
-    # reverse the noise into samples, X_generated = scaler.inverse_transform(X_generated_scaled)
+    print('Diffusion starting')
+    X_noise = get_noise(real_samples, loc=loc_noise, scale=scale_noise)
+    fake_samples = diffusion(X=X_noise,
+                             T=T, 
+                             model=model,
+                             scaler=scaler,
+                             alphas=alphas,
+                             alpha_cumprod=alpha_cumprod,
+                             betas=betas,)
+    fake_cols = fake_samples.columns
+    for i in fake_cols:
+        print(f'--Column {i}--\nMean: {fake_samples[i].mean()}\nVar: {fake_samples[i].var()}')
     # get statistics for the generated samples
 
 

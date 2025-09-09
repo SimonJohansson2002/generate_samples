@@ -6,9 +6,9 @@ def get_noise(df: pd.DataFrame, loc: float, scale: float) -> pd.DataFrame:
     Generates white noise for the samples. 
 
     Args:
-        df (pd.DataFrame): The data to which we add white noise
+        df (pd.DataFrame): DataFrame with same dimension as samples
         loc (float): Mean for white noise
-        scale (float): Ttandard deviation for the white noise
+        scale (float): Standard deviation for the white noise
 
     Returns:
         pd.DataFrame: White noise with the same dimensions as input df. 
@@ -21,7 +21,7 @@ def get_noise(df: pd.DataFrame, loc: float, scale: float) -> pd.DataFrame:
     return pd.DataFrame(noise, columns=columns)
 
 
-def add_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, alpha_cumprod: np.cumprod) -> tuple[pd.DataFrame]:
+def add_noise(df: pd.DataFrame, loc: float, scale: float, t: np.ndarray, alpha_cumprod: np.ndarray) -> tuple[pd.DataFrame]:
     """
     Adds white noise to the given dataframe. 
 
@@ -29,8 +29,8 @@ def add_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, alpha_cum
         df (pd.DataFrame): Dataframe
         loc (float): Mean for white noise
         scale (float): Standard deviation for the white noise
-        t (np.array): Matrix with timesteps for each sample
-        alpha_cumprod (np.cumprod): Compounded diffusion rates
+        t (np.ndarray): Matrix with timesteps for each sample
+        alpha_cumprod (np.ndarray): Compounded diffusion rates
 
     Returns:
         tuple[pd.DataFrame]: New dataframe with added noise and the noise added
@@ -42,7 +42,7 @@ def add_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, alpha_cum
     return df_noise, noise
 
 
-def samples_with_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, alpha_cumprod: np.cumprod) -> pd.DataFrame:
+def samples_with_noise(df: pd.DataFrame, loc: float, scale: float, t: np.ndarray, alpha_cumprod: np.ndarray) -> pd.DataFrame:
     """
     Adds white noise to the real data. Uses linear diffusion schedule. 
     alpha = 1 - beta
@@ -52,8 +52,8 @@ def samples_with_noise(df: pd.DataFrame, loc: float, scale: float, t: np.array, 
         df (pd.DataFrame): DataFrame with real data
         loc (float): Mean for white noise
         scale (float): Standard deviation for white noise
-        t (np.array): Matrix with timesteps for each sample
-        alpha_cumprod (np.cumprod): Compounded diffusion rates
+        t (np.ndarray): Matrix with timesteps for each sample
+        alpha_cumprod (np.ndarray): Compounded diffusion rates
 
     Returns (pd.DataFrame): Samples with noise, examples of column names [0, 1, Noise 0, Noise 1] where [0, 1] are 'df' after noise has been added and [Noise 0, Noise 1] are the noise added. 
     """

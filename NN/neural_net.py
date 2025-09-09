@@ -6,33 +6,33 @@ import pandas as pd
 import numpy as np
 
 
-def sigmoid(x: np.array) -> np.array:
+def sigmoid(x: np.ndarray) -> np.ndarray:
     """
     Transforms values between (-inf, inf) into values between (0, 1) using sigmoid function.
 
     Args:
-        x (np.array): Original values between (-inf, inf)
+        x (np.ndarray): Original values between (-inf, inf)
 
     Returns:
-        np.array: Transformed values between (0, 1)
+        np.ndarray: Transformed values between (0, 1)
     """
     return 1 / (1 + np.exp(-x))
 
 
-def inverse_sigmoid(x: np.array) -> np.array:
+def inverse_sigmoid(x: np.ndarray) -> np.ndarray:
     """
     Transforms values between (0, 1) to (-inf, inf) using inverse sigmoid function. 
 
     Args:
-        x (np.array): Values between (0, 1).
+        x (np.ndarray): Values between (0, 1).
 
     Returns:
-        np.array: Transformed values between (-inf, inf).
+        np.ndarray: Transformed values between (-inf, inf).
     """
     return -np.log(1/x - 1)
 
 
-def get_xy(df: pd.DataFrame) -> tuple[np.array]:
+def get_xy(df: pd.DataFrame) -> tuple[np.ndarray]:
     """
     Extracts the input data and labels. 
 
@@ -40,7 +40,7 @@ def get_xy(df: pd.DataFrame) -> tuple[np.array]:
         df (pd.DataFrame): Dataframe where column with labels have 'Noise' in the name. 
 
     Returns:
-        tuple[np.array]: X and y
+        tuple[np.ndarray]: X and y
     """
     columns = df.columns
 
@@ -59,14 +59,15 @@ def get_xy(df: pd.DataFrame) -> tuple[np.array]:
     return np.array(X), np.array(y)
 
 
-def train_nn(X: np.array, 
-             y: np.array, 
-             t: np.array, 
+def train_nn(X: np.ndarray, 
+             y: np.ndarray, 
+             t: np.ndarray, 
              T: int, 
              scaler: StandardScaler, 
              batch_size: int,
              epochs: int,
              model: models.Model = None,
+             t_emb_units: int = 16,
              X_units: int = 16,
              t_units: int = 16,
              concatenate_units: list[int] = [16]) -> tuple[models.Model, float]:
@@ -74,14 +75,15 @@ def train_nn(X: np.array,
     Trains a timestep-conditioned neural network. Data does not need to be scaled.
 
     Args:
-        X (np.array): Input data, shape (n_samples, n_features).
-        y (np.array): Target noise, shape (n_samples, n_features).
-        t (np.array): Timesteps for each sample, shape (n_samples,).
+        X (np.ndarray): Input data, shape (n_samples, n_features).
+        y (np.ndarray): Target noise, shape (n_samples, n_features).
+        t (np.ndarray): Timesteps for each sample, shape (n_samples,).
         T (int): Maximum number of timesteps.
         scaler (StandardScaler): Scaler for X.
         batch_size (int): Batch size when fitting data. 
         epochs (int): Number of epochs used in training. 
         model (models.Model, optional): Existing model to continue training. Defaults to None.
+        t_emb_units (int, optional): Number of neurons for embedded timestep.
         X_units (int, optional): Number of neurons for X-values. 
         t_units (int, optional): Number of neurons for t-values. 
         concatenate_units (list[int], optional): Number of neurons for concatenated X- and t-values. If several values in the list, then layers are added. 
@@ -101,7 +103,7 @@ def train_nn(X: np.array,
         t_input = layers.Input(shape=(), dtype=tf.int32)
 
         # Time embedding
-        t_emb = layers.Embedding(input_dim=T+1, output_dim=32)(t_input)
+        t_emb = layers.Embedding(input_dim=T+1, output_dim=t_emb_units)(t_input)
         t_emb = layers.Dense(t_units, activation="relu")(t_emb)
 
         # Feature projection
@@ -129,14 +131,14 @@ def train_nn(X: np.array,
     return model, first_loss
 
 
-def get_predicted_noise(X: np.array, t: np.array, model: models.Sequential, scaler: StandardScaler) -> pd.DataFrame:
+def get_predicted_noise(X: np.array, t: np.array, model: models.Model, scaler: StandardScaler) -> pd.DataFrame:
     """
     Takes noisy data and predicts the noise.
 
     Args:
         X (np.array): Input data, shape (n_samples, n_features). Not scaled data.
         t (np.array): Matrix with timesteps for each sample.
-        model (models.Sequential): Neural network model.
+        model (models.Model): Neural network model.
         scaler (StandardScaler): Scaler for X.
 
     Returns:
